@@ -52,6 +52,7 @@ public class Cocinero implements Runnable {
 
     private void cocinarOrden() {
         try {
+            System.out.println("Cocinero " + id + " cocinando orden " + ordenActual.getId());
             Thread.sleep(Constants.COOKING_TIME * 1000L);
             estado = EstadoCocinero.ORDEN_LISTA;
             System.out.println("Cocinero " + id + " terminó de preparar orden " + ordenActual.getId());

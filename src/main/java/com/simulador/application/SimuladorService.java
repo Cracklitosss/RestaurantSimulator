@@ -97,4 +97,20 @@ public class SimuladorService {
     public int getClientesRecibidos() {
         return recepcionista.getClientesRecibidos();
     }
+
+    public int getClientesEnEspera() {
+        return monitor.getClientesEnEspera();
+    }
+
+    public List<Comensal> getComensalesActuales() {
+        return monitor.getComensalesActuales();
+    }
+
+    public String getEstadisticasDetalladas() {
+        return monitor.getEstadisticasDetalladas();
+    }
+
+    public int getOrdenesSiendoCocinadas() {
+        return monitor.getOrdenesSiendoCocinadas();
+    }
 }

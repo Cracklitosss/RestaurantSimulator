@@ -14,6 +14,9 @@ import javafx.util.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import javafx.scene.shape.Rectangle;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Iterator;
 
 public class GameApp extends GameApplication {
     private SimuladorService simuladorService;
@@ -23,6 +26,7 @@ public class GameApp extends GameApplication {
     private Text statsText;
     private Button btnIniciar;
     private Button btnDetener;
+    private Map<Integer, ComensalEntity> comensalesEntities;
 
     @Override
     protected void initSettings(GameSettings settings) {
@@ -38,6 +42,7 @@ public class GameApp extends GameApplication {
         mesas = new ArrayList<>();
         meserosEntities = new ArrayList<>();
         cocinerosEntities = new ArrayList<>();
+        comensalesEntities = new HashMap<>();
 
         // Crear mesas
         for (int i = 0; i < Constants.RESTAURANT_CAPACITY; i++) {
@@ -81,6 +86,9 @@ public class GameApp extends GameApplication {
 
         // Iniciar actualización de estadísticas
         FXGL.run(() -> actualizarEstadisticas(), Duration.seconds(1));
+
+        // Agregar un observer para nuevos comensales
+        FXGL.run(() -> actualizarComensales(), Duration.seconds(0.5));
     }
 
     private void crearBotonesControl() {
@@ -109,18 +117,75 @@ public class GameApp extends GameApplication {
     private void actualizarEstadisticas() {
         String stats = String.format("""
                 Clientes en restaurante: %d
-                Órdenes en espera: %d
-                Órdenes por cocinar: %d
+                Clientes en espera: %d
+                Órdenes esperando mesero: %d
+                Órdenes en cola de cocina: %d
+                Órdenes siendo cocinadas: %d
                 Órdenes listas: %d
                 Total clientes recibidos: %d
                 """,
                 simuladorService.getClientesEnRestaurante(),
+                simuladorService.getClientesEnEspera(),
                 simuladorService.getOrdenesEnEspera(),
                 simuladorService.getOrdenesPorCocinar(),
+                simuladorService.getOrdenesSiendoCocinadas(),
                 simuladorService.getOrdenesListas(),
                 simuladorService.getClientesRecibidos());
         
         statsText.setText(stats);
+    }
+
+    private void actualizarComensales() {
+        List<Comensal> comensalesActuales = simuladorService.getComensalesActuales();
+        
+        // Remover comensales que ya no están en el restaurante
+        Iterator<Map.Entry<Integer, ComensalEntity>> it = comensalesEntities.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry<Integer, ComensalEntity> entry = it.next();
+            if (!comensalesActuales.contains(entry.getValue().getComensal())) {
+                FXGL.getGameWorld().removeEntity(entry.getValue());
+                it.remove();
+                System.out.println("Removida visualización del comensal " + entry.getKey());
+            }
+        }
+        
+        // Agregar nuevos comensales solo en mesas disponibles
+        for (Comensal comensal : comensalesActuales) {
+            if (!comensalesEntities.containsKey(comensal.getId())) {
+                // Encontrar una mesa libre
+                int mesaLibre = encontrarMesaLibre();
+                if (mesaLibre >= 0) {
+                    double x = 100 + (mesaLibre % 5) * 150;
+                    double y = 100 + (mesaLibre / 5) * 150;
+                    
+                    ComensalEntity comensalEntity = new ComensalEntity(comensal, x, y);
+                    comensalesEntities.put(comensal.getId(), comensalEntity);
+                    FXGL.getGameWorld().addEntity(comensalEntity);
+                }
+            }
+        }
+    }
+
+    private int encontrarMesaLibre() {
+        boolean[] mesasOcupadas = new boolean[Constants.RESTAURANT_CAPACITY];
+        
+        // Marcar mesas ocupadas
+        for (ComensalEntity entity : comensalesEntities.values()) {
+            int mesaIndex = (int)((entity.getX() - 100) / 150) + 
+                           ((int)((entity.getY() - 100) / 150) * 5);
+            if (mesaIndex >= 0 && mesaIndex < mesasOcupadas.length) {
+                mesasOcupadas[mesaIndex] = true;
+            }
+        }
+        
+        // Encontrar primera mesa libre
+        for (int i = 0; i < mesasOcupadas.length; i++) {
+            if (!mesasOcupadas[i]) {
+                return i;
+            }
+        }
+        
+        return -1;
     }
 
     public static void main(String[] args) {
