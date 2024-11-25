@@ -4,22 +4,25 @@ import com.almasb.fxgl.app.GameApplication;
 import com.almasb.fxgl.app.GameSettings;
 import com.almasb.fxgl.dsl.FXGL;
 import com.almasb.fxgl.entity.Entity;
-import com.simulador.application.RestauranteMonitor;
+import com.simulador.application.SimuladorService;
 import com.simulador.domain.*;
+import com.simulador.ui.entities.*;
+import javafx.scene.control.Button;
 import javafx.scene.paint.Color;
-import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Text;
 import javafx.util.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import javafx.scene.shape.Rectangle;
 
 public class GameApp extends GameApplication {
-    private RestauranteMonitor monitor;
-    private Recepcionista recepcionista;
-    private List<Entity> mesas = new ArrayList<>();
-    private List<Entity> meserosEntities = new ArrayList<>();
-    private List<Entity> cocinerosEntities = new ArrayList<>();
+    private SimuladorService simuladorService;
+    private List<Entity> mesas;
+    private List<MeseroEntity> meserosEntities;
+    private List<CocineroEntity> cocinerosEntities;
     private Text statsText;
+    private Button btnIniciar;
+    private Button btnDetener;
 
     @Override
     protected void initSettings(GameSettings settings) {
@@ -31,33 +34,41 @@ public class GameApp extends GameApplication {
 
     @Override
     protected void initGame() {
-        monitor = new RestauranteMonitor(Constants.RESTAURANT_CAPACITY, 
-                                       Constants.WAITERS_COUNT, 
-                                       Constants.COOKS_COUNT);
-        recepcionista = new Recepcionista(monitor);
+        simuladorService = new SimuladorService();
+        mesas = new ArrayList<>();
+        meserosEntities = new ArrayList<>();
+        cocinerosEntities = new ArrayList<>();
 
         // Crear mesas
         for (int i = 0; i < Constants.RESTAURANT_CAPACITY; i++) {
-            Entity mesa = crearMesa(100 + (i % 5) * 150, 100 + (i / 5) * 150);
+            Entity mesa = FXGL.entityBuilder()
+                    .at(100 + (i % 5) * 150, 100 + (i / 5) * 150)
+                    .view(new Rectangle(40, 40, Color.BROWN))
+                    .buildAndAttach();
             mesas.add(mesa);
         }
 
         // Crear meseros
         for (int i = 0; i < Constants.WAITERS_COUNT; i++) {
-            Entity meseroEntity = crearMesero(800, 100 + i * 100);
+            MeseroEntity meseroEntity = new MeseroEntity(
+                new Mesero(i, simuladorService.getMonitor()),
+                800,
+                100 + i * 100
+            );
             meserosEntities.add(meseroEntity);
-            new Thread(new Mesero(i, monitor)).start();
+            FXGL.getGameWorld().addEntity(meseroEntity);
         }
 
         // Crear cocineros
         for (int i = 0; i < Constants.COOKS_COUNT; i++) {
-            Entity cocineroEntity = crearCocinero(1000, 100 + i * 100);
+            CocineroEntity cocineroEntity = new CocineroEntity(
+                new Cocinero(i, simuladorService.getMonitor()),
+                1000,
+                100 + i * 100
+            );
             cocinerosEntities.add(cocineroEntity);
-            new Thread(new Cocinero(i, monitor)).start();
+            FXGL.getGameWorld().addEntity(cocineroEntity);
         }
-
-        // Iniciar recepcionista
-        new Thread(recepcionista).start();
 
         // Crear panel de estadísticas
         statsText = new Text();
@@ -65,29 +76,34 @@ public class GameApp extends GameApplication {
         statsText.setTranslateY(700);
         FXGL.getGameScene().addUINode(statsText);
 
+        // Crear botones de control
+        crearBotonesControl();
+
         // Iniciar actualización de estadísticas
         FXGL.run(() -> actualizarEstadisticas(), Duration.seconds(1));
     }
 
-    private Entity crearMesa(double x, double y) {
-        return FXGL.entityBuilder()
-                .at(x, y)
-                .view(new Rectangle(40, 40, Color.BROWN))
-                .buildAndAttach();
-    }
+    private void crearBotonesControl() {
+        btnIniciar = new Button("Iniciar Simulación");
+        btnIniciar.setTranslateX(50);
+        btnIniciar.setTranslateY(50);
+        btnIniciar.setOnAction(e -> {
+            simuladorService.iniciarSimulacion();
+            btnIniciar.setDisable(true);
+            btnDetener.setDisable(false);
+        });
 
-    private Entity crearMesero(double x, double y) {
-        return FXGL.entityBuilder()
-                .at(x, y)
-                .view(new Rectangle(30, 30, Color.BLUE))
-                .buildAndAttach();
-    }
+        btnDetener = new Button("Detener Simulación");
+        btnDetener.setTranslateX(200);
+        btnDetener.setTranslateY(50);
+        btnDetener.setDisable(true);
+        btnDetener.setOnAction(e -> {
+            simuladorService.detenerSimulacion();
+            btnIniciar.setDisable(false);
+            btnDetener.setDisable(true);
+        });
 
-    private Entity crearCocinero(double x, double y) {
-        return FXGL.entityBuilder()
-                .at(x, y)
-                .view(new Rectangle(30, 30, Color.RED))
-                .buildAndAttach();
+        FXGL.getGameScene().addUINodes(btnIniciar, btnDetener);
     }
 
     private void actualizarEstadisticas() {
@@ -96,11 +112,13 @@ public class GameApp extends GameApplication {
                 Órdenes en espera: %d
                 Órdenes por cocinar: %d
                 Órdenes listas: %d
+                Total clientes recibidos: %d
                 """,
-                monitor.getClientesActuales(),
-                monitor.getOrdenesEnEspera(),
-                monitor.getOrdenesPorCocinar(),
-                monitor.getOrdenesListas());
+                simuladorService.getClientesEnRestaurante(),
+                simuladorService.getOrdenesEnEspera(),
+                simuladorService.getOrdenesPorCocinar(),
+                simuladorService.getOrdenesListas(),
+                simuladorService.getClientesRecibidos());
         
         statsText.setText(stats);
     }
