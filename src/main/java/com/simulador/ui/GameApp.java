@@ -163,7 +163,33 @@ public class GameApp extends GameApplication {
                     FXGL.getGameWorld().addEntity(comensalEntity);
                 }
             }
+            
+            // Cambiar el color de la mesa si la orden ha sido entregada
+            ComensalEntity comensalEntity = comensalesEntities.get(comensal.getId());
+            if (comensal.getOrden() != null && comensal.getOrden().getEstado() == Orden.EstadoOrden.ENTREGADA) {
+                int mesaIndex = (int)((comensalEntity.getX() - 100) / 150) + 
+                               ((int)((comensalEntity.getY() - 100) / 150) * 5);
+                if (mesaIndex >= 0 && mesaIndex < mesas.size()) {
+                    mesas.get(mesaIndex).getViewComponent().clearChildren();
+                    mesas.get(mesaIndex).getViewComponent().addChild(new Rectangle(40, 40, Color.YELLOW)); // Cambia a amarillo
+                }
+                
+                // Mover mesero hacia la mesa
+                MeseroEntity meseroEntity = findAvailableMesero();
+                if (meseroEntity != null) {
+                    meseroEntity.moveTo(comensalEntity.getX(), comensalEntity.getY());
+                }
+            }
         }
+    }
+
+    private MeseroEntity findAvailableMesero() {
+        for (MeseroEntity meseroEntity : meserosEntities) {
+            if (meseroEntity.getMesero().getEstado() == Mesero.EstadoMesero.DISPONIBLE) {
+                return meseroEntity;
+            }
+        }
+        return null;
     }
 
     private int encontrarMesaLibre() {

@@ -2,7 +2,6 @@ com\simulador\ui\entities\ComensalEntity.class
 com\simulador\ui\entities\MeseroEntity.class
 com\simulador\infrastructure\PoissonGenerator.class
 com\simulador\domain\Mesero.class
-com\simulador\domain\Mesero$1.class
 com\simulador\domain\Cocinero$EstadoCocinero.class
 com\simulador\domain\Orden.class
 com\simulador\domain\Recepcionista.class
@@ -17,6 +16,5 @@ com\simulador\domain\Comensal$EstadoComensal.class
 com\simulador\application\RestauranteMonitor.class
 com\simulador\domain\Constants.class
 com\simulador\ui\EntityType.class
-com\simulador\domain\Cocinero$1.class
 com\simulador\domain\Mesero$EstadoMesero.class
 com\simulador\ui\GameApp.class
